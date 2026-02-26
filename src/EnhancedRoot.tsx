@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 type Props = {
   id: number
@@ -22,25 +22,15 @@ function Card(prop: Props) {
     return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
   }
 
-  function parseColorToRgb(color: string) {
-    if (color.startsWith('#')) return hexToRgb(color);
-    const m = color.match(/rgba?\(([^)]+)\)/);
-    if (m) {
-      const parts = m[1].split(',').map((s) => parseFloat(s));
-      return { r: parts[0] || 0, g: parts[1] || 0, b: parts[2] || 0 };
-    }
-    return { r: 255, g: 255, b: 255 };
-  }
-
   function isDarkColor(col: string) {
-    const { r, g, b } = parseColorToRgb(col);
+    const { r, g, b } = hexToRgb(col.startsWith('#') ? col : "#ffffff");
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
     return lum < 140;
   }
 
   const bg = '#e5e7eb';
-  const color = isDarkColor(bg) ? '#ffffff' : '#000000';
-  const defaultPillOverlay = isDarkColor(bg) ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.08)';
+  const color = '#000000';
+  const defaultPillOverlay = 'rgba(0,0,0,0.08)';
 
   return (
     <div style={{
@@ -56,9 +46,14 @@ function Card(prop: Props) {
         <span style={{textTransform: 'capitalize'}}>{prop.name}</span>
         <span style={{fontSize: 14, fontWeight: 600, opacity: 0.9}}>#{prop.id}</span>
       </div>
-      <img src={prop.image} style={{height: 150, display: "block", margin: "0 auto"}} alt={prop.name} />
-      <div style={{marginTop: 12, display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap'}}>
-        {prop.types.map((t) => {
+      <img 
+        src={prop.image} 
+        style={{height: 150, width: 150, objectFit: 'contain', display: "block", margin: "0 auto"}} 
+        alt={prop.name}
+        loading="lazy"
+      />
+      <div style={{marginTop: 12, display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', minHeight: '32px'}}>
+        {prop.types.length > 0 ? prop.types.map((t) => {
           const tb = typeColors[t] ?? defaultPillOverlay;
           const tColor = isDarkColor(tb) ? '#ffffff' : '#000000';
           return (
@@ -72,7 +67,7 @@ function Card(prop: Props) {
               textTransform: 'capitalize'
             }}>{t}</div>
           )
-        })}
+        }) : <div style={{opacity: 0.3, fontSize: 12}}>Caricamento tipi...</div>}
       </div>
     </div>
   )
@@ -80,36 +75,61 @@ function Card(prop: Props) {
 
 export function EnhancedRoot() {
   const [pokemonList, setPokemonList] = useState<Props[]>([]);
+  const TOTAL_POKEMON = 1025;
+  const BATCH_SIZE = 20;
 
   useEffect(() => {
-    const fetchPokemons = async () => {
-      // Limite impostato a 20 come richiesto
-      const response = await fetch('https://pokeapi.co/api/v2/pokemon?limit=20');
-      const data = await response.json();
+    const fetchInBatches = async () => {
+      // 1. Prima fase: Carichiamo velocemente la lista base (nomi e ID)
+      const res = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=${TOTAL_POKEMON}`);
+      const data = await res.json();
       
-      const detailedPromises = data.results.map(async (p: any) => {
-        const res = await fetch(p.url);
-        const details = await res.json();
-        return {
-          id: details.id,
-          name: details.name,
-          image: details.sprites.other['official-artwork'].front_default,
-          types: details.types.map((t: any) => t.type.name)
-        };
-      });
+      const baseList = data.results.map((p: any, index: number) => ({
+        id: index + 1,
+        name: p.name,
+        image: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${index + 1}.png`,
+        types: []
+      }));
+      
+      setPokemonList(baseList);
 
-      const results = await Promise.all(detailedPromises);
-      setPokemonList(results);
+      // 2. Seconda fase: Carichiamo i dettagli (tipi) a blocchi
+      for (let i = 0; i < TOTAL_POKEMON; i += BATCH_SIZE) {
+        const batch = baseList.slice(i, i + BATCH_SIZE);
+        
+        const updatedBatch = await Promise.all(batch.map(async (poke: any) => {
+          try {
+            const detailRes = await fetch(`https://pokeapi.co/api/v2/pokemon/${poke.id}`);
+            const detailData = await detailRes.json();
+            return {
+              ...poke,
+              types: detailData.types.map((t: any) => t.type.name)
+            };
+          } catch (e) {
+            return poke;
+          }
+        }));
+
+        // Aggiorniamo lo stato man mano che i blocchi sono pronti
+        setPokemonList(prev => {
+          const newList = [...prev];
+          updatedBatch.forEach((updatedPoke, index) => {
+            newList[i + index] = updatedPoke;
+          });
+          return newList;
+        });
+      }
     };
 
-    fetchPokemons();
+    fetchInBatches();
   }, []);
 
   return (
     <div style={{ 
       display: "grid", 
       gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", 
-      gap: "28px"
+      gap: "28px",
+      padding: "20px"
     }}>
       {pokemonList.map((poke) => (
         <Card key={poke.id} {...poke} />
