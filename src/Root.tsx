@@ -4,8 +4,6 @@ import { PokeAPI } from "./api";
 */
 
 
-
-
 type Props = {
     id: number 
     image: string
@@ -14,35 +12,22 @@ type Props = {
 }
 
 function Card(prop: Props) {
-  return (
-    <div>
-      {prop.id} - {prop.name}
-      <img src={prop.image} />
-      <p>{prop.types.join(", ")}</p>
+  return <div>
+    {prop.id}
+    {prop.name}
+
+    <img src={prop.image} />
+    
     </div>
-  )
 }
 
 export function Root() {
-  return (
-    <div>
-      {/* Prima Card */}
-      <Card
-        id={0}
-        image="https://www.pokemon.com/static-assets/content-assets/cms2/img/pokedex/full/025.png"
-        name="Pikachu"
-        types={["grass"]}
-      />
-
-      <Card
-        id={1}
-        image="https://www.pokemon.com/static-assets/content-assets/cms2/img/pokedex/full/004.pngg"
-        name="charmander"
-        types={["fire"]}
-      />
-    </div>
-  )
-}
+  return <Card
+    id={0}
+    image="https://placeholdit.com/400/dddddd/999999"
+    name="Pikachu"
+    types={["grass"]}
+    />
 
 function getTypeColor(type: string): string {
   return typeColors[type];
