@@ -1,3 +1,5 @@
+import React, { useState, useEffect } from 'react';
+
 type Props = {
   id: number
   image: string
@@ -7,34 +9,17 @@ type Props = {
 
 function Card(prop: Props) {
   const typeColors: { [key: string]: string } = {
-    fire: "#f87171",
-    water: "#3b82f6",
-    grass: "#4ade80",
-    electric: "#facc15",
-    psychic: "#f472b6",
-    ice: "#67e8f9",
-    dragon: "#7c3aed",
-    dark: "#374151",
-    fairy: "#fda4af",
-    normal: "#9ca3af",
-    fighting: "#b91c1c",
-    flying: "#6366f1",
-    poison: "#8b5cf6",
-    ground: "#eab308",
-    rock: "#b45309",
-    bug: "#15803d",
-    ghost: "#4f46e5",
-    steel: "#6b7280",
+    fire: "#f87171", water: "#3b82f6", grass: "#4ade80", electric: "#facc15",
+    psychic: "#f472b6", ice: "#67e8f9", dragon: "#7c3aed", dark: "#374151",
+    fairy: "#fda4af", normal: "#9ca3af", fighting: "#b91c1c", flying: "#6366f1",
+    poison: "#8b5cf6", ground: "#eab308", rock: "#b45309", bug: "#15803d",
+    ghost: "#4f46e5", steel: "#6b7280",
   };
 
   function hexToRgb(hex: string) {
     const clean = hex.replace('#', '');
     const bigint = parseInt(clean, 16);
-    return {
-      r: (bigint >> 16) & 255,
-      g: (bigint >> 8) & 255,
-      b: bigint & 255,
-    };
+    return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
   }
 
   function parseColorToRgb(color: string) {
@@ -53,10 +38,8 @@ function Card(prop: Props) {
     return lum < 140;
   }
 
-  // force all card backgrounds to light gray
   const bg = '#e5e7eb';
   const color = isDarkColor(bg) ? '#ffffff' : '#000000';
-  // default pill overlay when specific type color not available
   const defaultPillOverlay = isDarkColor(bg) ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.08)';
 
   return (
@@ -66,16 +49,15 @@ function Card(prop: Props) {
       padding: 20,
       borderRadius: 12,
       boxShadow: "0 6px 18px rgba(0,0,0,0.14)",
-      width: 260,
       textAlign: "center",
       fontSize: 18,
     }}>
       <div style={{fontWeight: 800, marginBottom: 10, display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: 8}}>
-        <span>{prop.name}</span>
+        <span style={{textTransform: 'capitalize'}}>{prop.name}</span>
         <span style={{fontSize: 14, fontWeight: 600, opacity: 0.9}}>#{prop.id}</span>
       </div>
-      <img src={prop.image} style={{height: 180, display: "block", margin: "0 auto"}} />
-      <div style={{marginTop: 12, display: 'flex', justifyContent: 'center', gap: 10}}>
+      <img src={prop.image} style={{height: 150, display: "block", margin: "0 auto"}} alt={prop.name} />
+      <div style={{marginTop: 12, display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap'}}>
         {prop.types.map((t) => {
           const tb = typeColors[t] ?? defaultPillOverlay;
           const tColor = isDarkColor(tb) ? '#ffffff' : '#000000';
@@ -97,31 +79,41 @@ function Card(prop: Props) {
 }
 
 export function EnhancedRoot() {
+  const [pokemonList, setPokemonList] = useState<Props[]>([]);
+
+  useEffect(() => {
+    const fetchPokemons = async () => {
+      // Limite impostato a 20 come richiesto
+      const response = await fetch('https://pokeapi.co/api/v2/pokemon?limit=20');
+      const data = await response.json();
+      
+      const detailedPromises = data.results.map(async (p: any) => {
+        const res = await fetch(p.url);
+        const details = await res.json();
+        return {
+          id: details.id,
+          name: details.name,
+          image: details.sprites.other['official-artwork'].front_default,
+          types: details.types.map((t: any) => t.type.name)
+        };
+      });
+
+      const results = await Promise.all(detailedPromises);
+      setPokemonList(results);
+    };
+
+    fetchPokemons();
+  }, []);
+
   return (
-    <div style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
-      {/* Pikachu originale */}
-      <Card
-        id={25}
-        image="https://www.pokemon.com/static-assets/content-assets/cms2/img/pokedex/full/025.png"
-        name="Pikachu"
-        types={["electric"]}
-      />
-
-      {/* Greninja */}
-      <Card
-        id={658}
-        image="https://www.pokemon.com/static-assets/content-assets/cms2/img/pokedex/full/658.png"
-        name="Greninja"
-        types={["water","dark"]}
-      />
-
-      {/* Charmander */}
-      <Card
-        id={4}
-        image="https://www.pokemon.com/static-assets/content-assets/cms2/img/pokedex/full/004.png"
-        name="charmander"
-        types={["fire"]}
-      />
+    <div style={{ 
+      display: "grid", 
+      gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", 
+      gap: "28px"
+    }}>
+      {pokemonList.map((poke) => (
+        <Card key={poke.id} {...poke} />
+      ))}
     </div>
   )
 }
