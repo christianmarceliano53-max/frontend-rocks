@@ -3,7 +3,8 @@ import { Link } from "react-router";
 import { PokeAPI } from "./api";
 */
 
-import { prependOnceListener } from "process"
+
+
 
 type Props = {
     id: number 
@@ -13,37 +14,35 @@ type Props = {
 }
 
 function Card(prop: Props) {
-  return <div>
-    {prop.id}
-    {prop.name}
-
-    <img src={prop.image} />
-    
+  return (
+    <div>
+      {prop.id} - {prop.name}
+      <img src={prop.image} />
+      <p>{prop.types.join(", ")}</p>
     </div>
+  )
 }
 
 export function Root() {
   return (
     <div>
+      {/* Prima Card */}
       <Card
         id={0}
-        image="https://placeholdit.com/400/dddddd/999999"
+        image="https://www.pokemon.com/static-assets/content-assets/cms2/img/pokedex/full/025.png"
         name="Pikachu"
         types={["grass"]}
       />
+
       <Card
         id={1}
-        image="https://placeholdit.com/400/dddddd/999999"
-        name="Charmanderr"
+        image="https://www.pokemon.com/static-assets/content-assets/cms2/img/pokedex/full/004.pngg"
+        name="charmander"
         types={["fire"]}
       />
     </div>
-  );
+  )
 }
-
-
-
-
 
 function getTypeColor(type: string): string {
   return typeColors[type];
